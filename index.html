@@ -102,7 +102,7 @@
 
     .grid{
       display:grid;
-      grid-template-columns: 1.2fr .8fr;
+      grid-template-columns: 1fr;
       gap:12px;
       align-items:start;
     }
@@ -253,22 +253,30 @@
     .alert.bad{ border-color: rgba(212,60,60,.35); color:#4a0c0c; background: rgba(212,60,60,.08); }
     .alert.warn{ border-color: rgba(166,106,0,.35); color:#4b3200; background: rgba(166,106,0,.08); }
 
-    .summary{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size:12px;
-      background:#FAFBFF;
-      border:1px solid var(--line);
+
+    .zone-note{
+      margin:0 0 12px;
+      padding:10px 12px;
+      border:1px solid var(--line2);
+      border-left:5px solid var(--blue);
       border-radius:10px;
-      padding:10px;
-      max-height: 460px;
-      overflow:auto;
-      white-space:pre-wrap;
+      background:#F7FAFF;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
     }
+
+    .transfer{
+      margin-top:12px;
+      display:grid;
+      gap:8px;
+    }
+
+    .transfer textarea{ min-height:76px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
     /* PRINT: header + resumen, título alineado derecha y a la altura del logo */
     @media print{
       body{ background:#fff !important; padding:0 !important; }
-      .grid > .card:not(#cardResumen){ display:none !important; }
       .grid{ grid-template-columns:1fr !important; }
 
       header{ display:block !important; box-shadow:none !important; margin:0 0 10px !important; }
@@ -283,9 +291,6 @@
         align-self:center !important;
       }
 
-      #cardResumen{ border:1px solid #ddd !important; box-shadow:none !important; }
-      #cardResumen .summary{ max-height:none !important; overflow:visible !important; }
-      #cardResumen .row{ display:none !important; }
     }
   </style>
 </head>
@@ -307,8 +312,9 @@
 
         <div class="top-actions">
           <button class="btn ghost" id="btnLimpiar" type="button">Limpiar</button>
-          <button class="btn primary" id="btnGenerar" type="button">Generar resumen</button>
-          <button class="btn primary" id="btnPDF" type="button">Exportar PDF</button>
+          <button class="btn" id="btnCopiarCodigo" type="button">Copiar código</button>
+          <button class="btn" id="btnPegarCodigo" type="button">Pegar código</button>
+          <button class="btn primary" id="btnPDF" type="button">Exportar PDF completo</button>
         </div>
       </div>
     </header>
@@ -323,7 +329,19 @@
         <div class="bd">
           <form id="formSolicitud" autocomplete="on">
 
-            <div class="section-title" style="margin-top:0;">
+            <div class="zone-note"><b>Zona 1 · Ejecutiva de ventas:</b> completa esta sección con la información que el cliente puede entregar fácilmente.</div>
+
+            <div class="transfer">
+              <label for="codigoAutocompletar">Código de autocompletado (copiar/pegar entre PCs)</label>
+              <textarea id="codigoAutocompletar" placeholder="Pega aquí el código para recuperar datos guardados."></textarea>
+              <div class="row" style="margin-bottom:0;">
+                <button class="btn" id="btnCopiarCodigoZona" type="button">Copiar código guardado</button>
+                <button class="btn" id="btnPegarCodigoZona" type="button">Pegar código en este equipo</button>
+              </div>
+              <div id="msgCodigo" class="alert">Este código te permite migrar datos entre computadoras.</div>
+            </div>
+
+            <div class="section-title" style="margin-top:12px;">
               <span>Información general</span>
               <span class="badge">obligatorio</span>
             </div>
@@ -405,6 +423,8 @@
                   placeholder="Notas generales, urgencia, restricciones, etc."></textarea>
               </div>
             </div>
+
+            <div class="zone-note"><b>Zona 2 · Área de desarrollo:</b> aquí se llena la información técnica para elaborar y validar la muestra.</div>
 
             <!-- TERMO -->
             <div class="section hidden" id="secTermo">
@@ -1023,37 +1043,13 @@
 
             <div class="section">
               <div class="alert warn" id="msgAyuda">
-                <b>Tip:</b> Completa los campos con <b>*</b> y presiona <b>Generar resumen</b>. El formulario se guarda automáticamente.
+                <b>Tip:</b> El formulario se guarda automáticamente mientras lo completas, incluso si faltan campos obligatorios.
               </div>
             </div>
 
           </form>
         </div>
       </div>
-
-      <!-- RESUMEN -->
-      <div class="card" id="cardResumen">
-        <div class="hd">
-          <strong>Resumen</strong>
-          <span class="pill">Producto: <span id="tipoElegido">—</span></span>
-        </div>
-        <div class="bd">
-          <div id="msgResumen" class="alert">Genera el resumen para habilitar el envío por correo.</div>
-          <div style="height:10px"></div>
-          <div class="summary" id="outResumen">Sin datos todavía…</div>
-
-          <div style="height:12px"></div>
-          <div class="row">
-            <button class="btn" id="btnCopiar" type="button">Copiar</button>
-            <button class="btn primary" id="btnEnviarCorreo" type="button" disabled>Enviar por correo</button>
-            <button class="btn" id="btnImprimir" type="button">Imprimir</button>
-          </div>
-          <div class="hint">Enviar por correo se habilita solo cuando el resumen es válido.</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
 
 <script>
 (function(){
@@ -1098,31 +1094,14 @@
   const secLiner = $("secLiner");
 
   const estadoForm = $("estadoForm");
-  const tipoElegido = $("tipoElegido");
-  const msgResumen = $("msgResumen");
-  const outResumen = $("outResumen");
-  const btnEnviarCorreo = $("btnEnviarCorreo");
-
   const secTermoFunda = $("secTermoFunda");
   const secTermoPrecinto = $("secTermoPrecinto");
   const tTipoTermo = $("t_tipoTermo");
 
-  // Estado de resumen válido
-  let resumenValido = false;
-
-  function setResumenValido(val){
-    resumenValido = !!val;
-    btnEnviarCorreo.disabled = !resumenValido;
-  }
-
-  function getCheckedValues(name){
-    return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);
-  }
   function getRadioValue(name){
     const el = form.querySelector(`input[name="${name}"]:checked`);
     return el ? el.value : "";
   }
-  function pick(obj, key){ return (obj[key] ?? "").toString().trim(); }
 
   function disableRequired(sec){
     sec.querySelectorAll("[required]").forEach(el => {
@@ -1157,7 +1136,6 @@
       enableRequired(secLiner);
     }
 
-    tipoElegido.textContent = tipo || "—";
   }
 
   // TERMO: FUNDA vs PRECINTO TERMO
@@ -1177,7 +1155,7 @@
       pestana.removeAttribute("required"); pestana.value = "";
     }
   }
-  tTipoTermo.addEventListener("change", ()=>{ syncTipoTermo(); invalidateResumen(); });
+  tTipoTermo.addEventListener("change", ()=>{ syncTipoTermo(); });
 
   // TERMO: Material "Otros"
   const matSel = $("t_material");
@@ -1189,7 +1167,7 @@
     if(isOtros) matOtro.setAttribute("required","required");
     else { matOtro.removeAttribute("required"); matOtro.value = ""; }
   }
-  matSel.addEventListener("change", ()=>{ syncMaterialOtros(); invalidateResumen(); });
+  matSel.addEventListener("change", ()=>{ syncMaterialOtros(); });
 
   // TERMO: "Se termoencoge con" Otros
   const termoConSel = $("t_termoCon");
@@ -1201,7 +1179,7 @@
     if(isOtros) termoConOtro.setAttribute("required","required");
     else { termoConOtro.removeAttribute("required"); termoConOtro.value = ""; }
   }
-  termoConSel.addEventListener("change", ()=>{ syncTermoConOtros(); invalidateResumen(); });
+  termoConSel.addEventListener("change", ()=>{ syncTermoConOtros(); });
 
   // TERMO: Microperforado -> si Sí, cantidad/patrón requerido
   const microWrap = $("t_micro_wrap");
@@ -1213,7 +1191,7 @@
     if(on) microCant.setAttribute("required","required");
     else { microCant.removeAttribute("required"); microCant.value = ""; }
   }
-  form.querySelectorAll("input[name='t_micro']").forEach(r=>r.addEventListener("change", ()=>{ syncMicro(); invalidateResumen(); }));
+  form.querySelectorAll("input[name='t_micro']").forEach(r=>r.addEventListener("change", ()=>{ syncMicro(); }));
 
   // TERMO: Grafilado -> si no es "No", detalle requerido
   const grafSel = $("t_grafiladoTipo");
@@ -1225,7 +1203,7 @@
     if(on) grafDet.setAttribute("required","required");
     else { grafDet.removeAttribute("required"); grafDet.value = ""; }
   }
-  grafSel.addEventListener("change", ()=>{ syncGrafilado(); invalidateResumen(); });
+  grafSel.addEventListener("change", ()=>{ syncGrafilado(); });
 
   // Precintos de seguridad: modelo "Otros"
   const psModelo = $("ps_modelo");
@@ -1237,7 +1215,7 @@
     if(isOtros) psOtro.setAttribute("required","required");
     else { psOtro.removeAttribute("required"); psOtro.value = ""; }
   }
-  psModelo.addEventListener("change", ()=>{ syncPrecintoSegOtros(); invalidateResumen(); });
+  psModelo.addEventListener("change", ()=>{ syncPrecintoSegOtros(); });
 
   // Liner: material Otro -> requerido si selecciona Otro
   const lMat = $("l_materialCodigo");
@@ -1247,178 +1225,13 @@
     if(on) lOtro.setAttribute("required","required");
     else { lOtro.removeAttribute("required"); lOtro.value=""; }
   }
-  lMat.addEventListener("change", ()=>{ syncLinerOtro(); invalidateResumen(); });
+  lMat.addEventListener("change", ()=>{ syncLinerOtro(); });
 
   function validateBasics(){
     const ok = form.checkValidity();
     estadoForm.textContent = ok ? "Listo" : "Pendiente";
     estadoForm.style.color = ok ? "var(--ok)" : "var(--blue)";
     return ok;
-  }
-
-  function buildSummary(){
-    const fd = new FormData(form);
-    const obj = {};
-    fd.forEach((v,k)=>{
-      if(obj[k]){
-        if(Array.isArray(obj[k])) obj[k].push(v);
-        else obj[k] = [obj[k], v];
-      } else obj[k] = v;
-    });
-
-    obj.tipoProducto = getRadioValue("tipoProducto");
-    obj.t_experiencia = getRadioValue("t_experiencia");
-    obj.t_muestraFisica = getRadioValue("t_muestraFisica");
-    obj.t_aplicador = getRadioValue("t_aplicador");
-    obj.t_taca = getRadioValue("t_taca");
-    obj.t_micro = getRadioValue("t_micro");
-    obj.ps_numeracion = getRadioValue("ps_numeracion");
-    obj.l_sellado = getRadioValue("l_sellado");
-
-    obj.t_funda_checks = getCheckedValues("t_funda_checks").join(", ");
-    obj.ps_personalizacion = getCheckedValues("ps_personalizacion").join(", ");
-    obj.l_req = getCheckedValues("l_req").join(", ");
-
-    const tipo = pick(obj,"tipoProducto");
-    const lines = [];
-
-    lines.push("=== FORMULARIO DE SOLICITUD (SALMAPLAST) ===");
-    lines.push(`Fecha: ${pick(obj,"fechaSolicitud")}`);
-    lines.push(`Ejecutiva a cargo: ${pick(obj,"ejecutiva")}`);
-    lines.push(`Solicitante: ${pick(obj,"solicitante")}`);
-    lines.push(`Cliente/Empresa: ${pick(obj,"empresa")}`);
-    lines.push(`Contacto: ${pick(obj,"contacto") || "-"}`);
-    lines.push(`OC/Referencia: ${pick(obj,"oc") || "-"}`);
-    lines.push(`Prioridad: ${pick(obj,"prioridad")}`);
-    lines.push(`Sector destinado: ${pick(obj,"sectorProducto") || "-"}`);
-    lines.push(`Tipo de producto: ${tipo || "-"}`);
-    lines.push("");
-
-    lines.push("=== DETALLE DEL PRODUCTO ===");
-
-    if(tipo === "Termoencogible"){
-      const material = (pick(obj,"t_material")==="Otros")
-        ? `Otros: ${pick(obj,"t_material_otros") || "-"}`
-        : pick(obj,"t_material");
-
-      const termoCon = (pick(obj,"t_termoCon")==="Otros")
-        ? `Otros: ${pick(obj,"t_termoCon_otros") || "-"}`
-        : pick(obj,"t_termoCon");
-
-      lines.push("Producto: TERMOENCOGIBLE");
-      lines.push(`Subtipo: ${pick(obj,"t_tipoTermo")}`);
-      lines.push(`Tipo de lámina: ${pick(obj,"t_laminaTipo")}`);
-      lines.push(`Experiencia cliente: ${pick(obj,"t_experiencia") || "-"}`);
-      lines.push(`Muestra física impresa: ${pick(obj,"t_muestraFisica") || "-"}`);
-      lines.push(`Se termoencoge con: ${termoCon || "-"}`);
-      lines.push(`Aplicador de etiquetas: ${pick(obj,"t_aplicador") || "-"}`);
-      lines.push(`Tipo aplicación/sellado: ${pick(obj,"t_selladoTipo")}`);
-      lines.push(`¿Imprimir TACA?: ${pick(obj,"t_taca") || "-"}`);
-
-      lines.push(`Medidas: Ancho ${pick(obj,"t_ancho")} mm | Avance ${pick(obj,"t_avance")} mm`);
-      lines.push(`Material: ${material}`);
-      lines.push(`Calibre/Espesor: ${pick(obj,"t_calibre")}`);
-      lines.push(`Colores a imprimir: ${pick(obj,"t_colores")}`);
-      lines.push(`Sistema de color: ${pick(obj,"t_sistemaColor")}`);
-
-      if(pick(obj,"t_tipoTermo")==="Funda"){
-        lines.push(`Tratamientos (funda): ${pick(obj,"t_funda_checks") || "-"}`);
-        lines.push(`Envase: ${pick(obj,"t_envase") || "-"}`);
-        lines.push(`Envase físico para prueba: ${pick(obj,"t_envaseDisponibilidad") || "-"}`);
-      } else {
-        lines.push("Detalle Precinto termoencogible:");
-        lines.push(`- Falda: ${pick(obj,"tp_falda")} mm`);
-        lines.push(`- Pestaña: ${pick(obj,"tp_pestana")} mm`);
-        lines.push(`- Tipo: ${pick(obj,"tp_tipoPrecinto") || "-"}`);
-        lines.push(`- Obs: ${pick(obj,"tp_obs") || "-"}`);
-      }
-
-      lines.push(`Grafilado: ${pick(obj,"t_grafiladoTipo") || "-"}`);
-      if(pick(obj,"t_grafiladoTipo") && pick(obj,"t_grafiladoTipo") !== "No"){
-        lines.push(`Detalle grafilado: ${pick(obj,"t_grafilado_detalle") || "-"}`);
-      }
-
-      lines.push(`Microperforado: ${pick(obj,"t_micro") || "-"}`);
-      if(pick(obj,"t_micro")==="Sí"){
-        lines.push(`Microperforado (cantidad/patrón): ${pick(obj,"t_micro_cantidad") || "-"}`);
-      }
-
-      lines.push(`Tipo de muestra: ${pick(obj,"t_muestraTipo") || "-"}`);
-      lines.push(`Prueba de túnel/encogido: ${pick(obj,"t_pruebaTunel") || "-"}`);
-      lines.push(`Cantidad de muestra: ${pick(obj,"t_cantidadMuestra") || "-"}`);
-      lines.push(`Obs. termoencogible: ${pick(obj,"t_observaciones") || "-"}`);
-    }
-    else if(tipo === "Precintos de seguridad"){
-      const modelo = (pick(obj,"ps_modelo")==="Otros")
-        ? `Otros: ${pick(obj,"ps_modelo_otros") || "-"}`
-        : pick(obj,"ps_modelo");
-
-      lines.push("Producto: PRECINTOS DE SEGURIDAD");
-      lines.push(`Modelo: ${modelo}`);
-      lines.push(`Color: ${pick(obj,"ps_color")}`);
-      lines.push(`Calibre de cable: ${pick(obj,"ps_cable")}`);
-      lines.push(`Cantidad: ${pick(obj,"ps_cantidad") || "-"}`);
-      lines.push(`Numeración: ${pick(obj,"ps_numeracion") || "-"}`);
-      lines.push(`Personalización: ${pick(obj,"ps_personalizacion") || "-"}`);
-      lines.push(`Nivel seguridad: ${pick(obj,"ps_seguridad") || "-"}`);
-      lines.push(`Resistencia (1-5): ${pick(obj,"ps_resistencia") || "-"}`);
-      lines.push(`Detalle: ${pick(obj,"ps_detalle") || "-"}`);
-      lines.push(`Obs. precintos: ${pick(obj,"ps_obs") || "-"}`);
-    }
-    else if(tipo === "Liner"){
-      const mat = pick(obj,"l_materialCodigo")==="Otro"
-        ? `Otro: ${pick(obj,"l_materialOtro") || "-"}`
-        : pick(obj,"l_materialCodigo");
-
-      lines.push("Producto: LINER");
-      lines.push(`Diámetro: ${pick(obj,"l_diametro")} mm`);
-      lines.push(`Tipo de envase: ${pick(obj,"l_tipoEnvase")}`);
-      lines.push(`Material (código): ${mat}`);
-      lines.push(`Tipo de sellado: ${pick(obj,"l_sellado") || "-"}`);
-      lines.push(`Contenido frasco: ${pick(obj,"l_contenido") || "-"}`);
-      lines.push(`Requisitos: ${pick(obj,"l_req") || "-"}`);
-      lines.push(`Impresión: ${pick(obj,"l_impresion") || "-"}`);
-      lines.push(`Texto/arte: ${pick(obj,"l_textoImpreso") || "-"}`);
-      lines.push(`Cantidad: ${pick(obj,"l_cantidad") || "-"}`);
-      lines.push(`Pruebas: ${pick(obj,"l_pruebas") || "-"}`);
-      lines.push(`Espesor: ${pick(obj,"l_espesor") || "-"}`);
-      lines.push(`Obs. liner: ${pick(obj,"l_observaciones") || "-"}`);
-    } else {
-      lines.push("Selecciona un tipo de producto para completar el detalle.");
-    }
-
-    lines.push("");
-    lines.push("=== ENTREGA / ENVÍO DE MUESTRA ===");
-    lines.push(`Fecha límite: ${pick(obj,"fechaLimite")}`);
-    lines.push(`Dirección: ${pick(obj,"direccionEnvio") || "-"}`);
-    lines.push(`Recepción: ${pick(obj,"responsableRecepcion") || "-"}`);
-    lines.push(`Celular recepción: ${pick(obj,"celularRecepcion") || "-"}`);
-
-    lines.push("");
-    lines.push("=== OBSERVACIONES GENERALES ===");
-    lines.push(pick(obj,"observacionesGenerales") || "-");
-
-    return lines.join("\n");
-  }
-
-  function isSummaryValid(text){
-    const t = (text || "").trim();
-    if(!t) return false;
-    if(t.includes("Sin datos")) return false;
-    // mínimo para evitar enviar "casi vacío"
-    if(t.length < 120) return false;
-    // debe tener secciones clave
-    const must = ["FORMULARIO DE SOLICITUD", "DETALLE DEL PRODUCTO", "ENTREGA / ENVÍO DE MUESTRA"];
-    return must.every(m => t.includes(m));
-  }
-
-  function invalidateResumen(){
-    setResumenValido(false);
-    // no borramos el texto por si quieren verlo, solo deshabilitamos envío hasta regenerar
-    if(msgResumen && resumenValido === false){
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "Editaste el formulario. Vuelve a <b>Generar resumen</b> para habilitar el envío por correo.";
-    }
   }
 
   // Producto: mostrar secciones
@@ -1433,38 +1246,8 @@
       syncTipoTermo();
       syncLinerOtro();
       validateBasics();
-      invalidateResumen();
+
     });
-  });
-
-  // Botón generar
-  $("btnGenerar").addEventListener("click", ()=>{
-    syncMaterialOtros();
-    syncTermoConOtros();
-    syncMicro();
-    syncGrafilado();
-    syncPrecintoSegOtros();
-    syncTipoTermo();
-    syncLinerOtro();
-
-    const ok = validateBasics();
-    const resumen = buildSummary();
-    outResumen.textContent = resumen;
-
-    if(ok && isSummaryValid(resumen)){
-      msgResumen.className = "alert ok";
-      msgResumen.innerHTML = "<b>Listo:</b> resumen generado y válido. Ya puedes enviar por correo.";
-      setResumenValido(true);
-    } else if(!ok){
-      msgResumen.className = "alert bad";
-      msgResumen.innerHTML = "<b>No se generó resumen válido:</b> faltan campos obligatorios (según el producto).";
-      setResumenValido(false);
-      form.reportValidity();
-    } else {
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "<b>Resumen incompleto:</b> revisa datos clave (tipo producto / envío / etc.) y genera nuevamente.";
-      setResumenValido(false);
-    }
   });
 
   $("btnLimpiar").addEventListener("click", ()=>{
@@ -1480,81 +1263,103 @@
     syncTipoTermo();
     syncLinerOtro();
 
-    tipoElegido.textContent = "—";
-    msgResumen.className = "alert";
-    msgResumen.textContent = "Genera el resumen para habilitar el envío por correo.";
-    outResumen.textContent = "Sin datos todavía…";
     $("estadoForm").textContent = "Pendiente";
     $("estadoForm").style.color = "var(--blue)";
-    setResumenValido(false);
 
     // borrar guardado
     localStorage.removeItem("salmaplast_form_v1");
   });
 
-  $("btnCopiar").addEventListener("click", async ()=>{
-    const text = outResumen.textContent || "";
-    if(!isSummaryValid(text)){
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "<b>Ojo:</b> primero genera un resumen válido.";
+  $("btnPDF").addEventListener("click", ()=>{
+    window.print();
+  });
+
+
+  function exportDataCode(){
+    const data = {};
+    const fields = form.querySelectorAll("input, select, textarea");
+    fields.forEach(el => {
+      if(!el.id && !el.name) return;
+      if(el.id === "codigoAutocompletar") return;
+      const key = el.id || el.name;
+      if(el.type === "radio"){ if(el.checked) data[el.name] = el.value; }
+      else if(el.type === "checkbox"){ data[key] = el.checked; }
+      else { data[key] = el.value; }
+    });
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  }
+
+  function importDataCode(code){
+    const json = decodeURIComponent(escape(atob(code.trim())));
+    const data = JSON.parse(json);
+    if(!data || typeof data !== "object") throw new Error("Código inválido");
+
+    const fields = form.querySelectorAll("input, select, textarea");
+    fields.forEach(el => {
+      const key = el.id || el.name;
+      if(!key || key === "codigoAutocompletar") return;
+      if(el.type === "radio"){
+        const saved = data[el.name];
+        el.checked = !!saved && el.value === saved;
+      } else if(el.type === "checkbox"){
+        if(key in data) el.checked = !!data[key];
+      } else if(key in data){
+        el.value = data[key];
+      }
+    });
+
+    const tipo = (form.querySelector("input[name='tipoProducto']:checked") || {}).value || "";
+    showProductSection(tipo);
+    syncMaterialOtros();
+    syncTermoConOtros();
+    syncMicro();
+    syncGrafilado();
+    syncPrecintoSegOtros();
+    syncTipoTermo();
+    syncLinerOtro();
+    validateBasics();
+  }
+
+  function showCodeMessage(type, html){
+    const msg = $("msgCodigo");
+    msg.className = `alert ${type}`;
+    msg.innerHTML = html;
+  }
+
+  function copyDataCode(){
+    try{
+      const code = exportDataCode();
+      $("codigoAutocompletar").value = code;
+      navigator.clipboard.writeText(code).catch(()=>{});
+      showCodeMessage("ok", "<b>Código generado:</b> se copió al portapapeles.");
+    } catch(e){
+      showCodeMessage("bad", "<b>Error:</b> no se pudo generar el código.");
+    }
+  }
+
+  function pasteDataCode(){
+    const code = $("codigoAutocompletar").value || "";
+    if(!code.trim()){
+      showCodeMessage("warn", "Pega primero un código para recuperar datos.");
       return;
     }
     try{
-      await navigator.clipboard.writeText(text);
-      msgResumen.className = "alert ok";
-      msgResumen.innerHTML = "<b>Copiado:</b> el resumen está en tu portapapeles.";
+      importDataCode(code);
+      saveFormToStorage();
+      showCodeMessage("ok", "<b>Listo:</b> datos restaurados desde el código.");
     } catch(e){
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "<b>No se pudo copiar automáticamente.</b> Copia manualmente el resumen.";
+      showCodeMessage("bad", "<b>Código inválido:</b> revisa y vuelve a intentar.");
     }
-  });
+  }
 
-  $("btnImprimir").addEventListener("click", ()=>{
-    if(!isSummaryValid(outResumen.textContent)) $("btnGenerar").click();
-    if(isSummaryValid(outResumen.textContent)) window.print();
-  });
+  $("btnCopiarCodigo").addEventListener("click", copyDataCode);
+  $("btnCopiarCodigoZona").addEventListener("click", copyDataCode);
+  $("btnPegarCodigo").addEventListener("click", pasteDataCode);
+  $("btnPegarCodigoZona").addEventListener("click", pasteDataCode);
 
-  $("btnPDF").addEventListener("click", ()=>{
-    if(!isSummaryValid(outResumen.textContent)) $("btnGenerar").click();
-    if(isSummaryValid(outResumen.textContent)) window.print();
-  });
-
-  // ✅ Enviar correo (solo si resumen válido y formulario válido)
-  btnEnviarCorreo.addEventListener("click", ()=>{
-    // doble seguridad
-    const okForm = form.checkValidity();
-    if(!okForm){
-      msgResumen.className = "alert bad";
-      msgResumen.innerHTML = "<b>No se puede enviar:</b> faltan campos obligatorios.";
-      setResumenValido(false);
-      form.reportValidity();
-      return;
-    }
-
-    const resumen = (outResumen.textContent || "").trim();
-    if(!isSummaryValid(resumen)){
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "<b>No se puede enviar:</b> primero genera un resumen válido.";
-      setResumenValido(false);
-      return;
-    }
-
-    // Aquí puedes poner correo fijo si deseas:
-    const to = ""; // Ej: "muestras@salmaplast.com"
-    const subject = "SALMAPLAST - Formulario de Solicitud";
-    const body = resumen;
-
-    const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-    msgResumen.className = "alert ok";
-    msgResumen.innerHTML = "<b>Listo:</b> se abrirá tu correo con el resumen cargado.";
-    window.location.href = mailto;
-  });
-
-  // Validación en vivo + invalidar resumen cuando cambian cosas
+  // Validación en vivo
   form.addEventListener("input", ()=>{
     validateBasics();
-    invalidateResumen();
   });
   form.addEventListener("change", ()=>{
     validateBasics();
@@ -1565,7 +1370,6 @@
     syncPrecintoSegOtros();
     syncTipoTermo();
     syncLinerOtro();
-    invalidateResumen();
   });
 
   /* ========= AUTO-GUARDADO (localStorage) ========= */
@@ -1630,8 +1434,6 @@
     syncLinerOtro();
     validateBasics();
 
-    // al cargar, el resumen NO se considera válido hasta regenerar
-    setResumenValido(false);
   }
 
   // guardar en cada cambio (suave con debounce)
@@ -1653,7 +1455,6 @@
   syncTipoTermo();
   syncLinerOtro();
   validateBasics();
-  setResumenValido(false);
 
   // Cargar guardado al abrir
   loadFormFromStorage();
