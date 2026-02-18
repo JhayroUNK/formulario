@@ -1038,17 +1038,15 @@
           <span class="pill">Producto: <span id="tipoElegido">—</span></span>
         </div>
         <div class="bd">
-          <div id="msgResumen" class="alert">Genera el resumen para habilitar el envío por correo.</div>
+          <div id="msgResumen" class="alert">Genera el resumen para copiarlo o imprimirlo.</div>
           <div style="height:10px"></div>
           <div class="summary" id="outResumen">Sin datos todavía…</div>
 
           <div style="height:12px"></div>
           <div class="row">
             <button class="btn" id="btnCopiar" type="button">Copiar</button>
-            <button class="btn primary" id="btnEnviarCorreo" type="button" disabled>Enviar por correo</button>
             <button class="btn" id="btnImprimir" type="button">Imprimir</button>
           </div>
-          <div class="hint">Enviar por correo se habilita solo cuando el resumen es válido.</div>
         </div>
       </div>
 
@@ -1101,7 +1099,6 @@
   const tipoElegido = $("tipoElegido");
   const msgResumen = $("msgResumen");
   const outResumen = $("outResumen");
-  const btnEnviarCorreo = $("btnEnviarCorreo");
 
   const secTermoFunda = $("secTermoFunda");
   const secTermoPrecinto = $("secTermoPrecinto");
@@ -1112,7 +1109,6 @@
 
   function setResumenValido(val){
     resumenValido = !!val;
-    btnEnviarCorreo.disabled = !resumenValido;
   }
 
   function getCheckedValues(name){
@@ -1417,7 +1413,7 @@
     // no borramos el texto por si quieren verlo, solo deshabilitamos envío hasta regenerar
     if(msgResumen && resumenValido === false){
       msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "Editaste el formulario. Vuelve a <b>Generar resumen</b> para habilitar el envío por correo.";
+      msgResumen.innerHTML = "Editaste el formulario. Vuelve a <b>Generar resumen</b> para actualizarlo.";
     }
   }
 
@@ -1453,7 +1449,7 @@
 
     if(ok && isSummaryValid(resumen)){
       msgResumen.className = "alert ok";
-      msgResumen.innerHTML = "<b>Listo:</b> resumen generado y válido. Ya puedes enviar por correo.";
+      msgResumen.innerHTML = "<b>Listo:</b> resumen generado y válido.";
       setResumenValido(true);
     } else if(!ok){
       msgResumen.className = "alert bad";
@@ -1482,7 +1478,7 @@
 
     tipoElegido.textContent = "—";
     msgResumen.className = "alert";
-    msgResumen.textContent = "Genera el resumen para habilitar el envío por correo.";
+    msgResumen.textContent = "Genera el resumen para copiarlo o imprimirlo.";
     outResumen.textContent = "Sin datos todavía…";
     $("estadoForm").textContent = "Pendiente";
     $("estadoForm").style.color = "var(--blue)";
@@ -1517,38 +1513,6 @@
   $("btnPDF").addEventListener("click", ()=>{
     if(!isSummaryValid(outResumen.textContent)) $("btnGenerar").click();
     if(isSummaryValid(outResumen.textContent)) window.print();
-  });
-
-  // ✅ Enviar correo (solo si resumen válido y formulario válido)
-  btnEnviarCorreo.addEventListener("click", ()=>{
-    // doble seguridad
-    const okForm = form.checkValidity();
-    if(!okForm){
-      msgResumen.className = "alert bad";
-      msgResumen.innerHTML = "<b>No se puede enviar:</b> faltan campos obligatorios.";
-      setResumenValido(false);
-      form.reportValidity();
-      return;
-    }
-
-    const resumen = (outResumen.textContent || "").trim();
-    if(!isSummaryValid(resumen)){
-      msgResumen.className = "alert warn";
-      msgResumen.innerHTML = "<b>No se puede enviar:</b> primero genera un resumen válido.";
-      setResumenValido(false);
-      return;
-    }
-
-    // Aquí puedes poner correo fijo si deseas:
-    const to = ""; // Ej: "muestras@salmaplast.com"
-    const subject = "SALMAPLAST - Formulario de Solicitud";
-    const body = resumen;
-
-    const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-    msgResumen.className = "alert ok";
-    msgResumen.innerHTML = "<b>Listo:</b> se abrirá tu correo con el resumen cargado.";
-    window.location.href = mailto;
   });
 
   // Validación en vivo + invalidar resumen cuando cambian cosas
